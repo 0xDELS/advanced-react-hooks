@@ -2,25 +2,31 @@
 // http://localhost:3000/isolated/exercise/03.js
 
 import * as React from 'react'
-import {useContext} from 'react'
-import {useState} from 'react'
 import {createContext} from 'react'
 
-const CounterContext = createContext()
+const CountContext = createContext()
 
 function CountProvider(props) {
-  const [count, setCount] = useState(0)
+  const [count, setCount] = React.useState(0)
   const value = [count, setCount]
-  return <CounterContext.Provider value={value} {...props} />
+  return <CountContext.Provider value={value} {...props} />
+}
+
+function useCount() {
+  const context = React.useContext(CountContext)
+  if (!context) {
+    throw new Error('useCount must be used within a CountProvider')
+  }
+  return context
 }
 
 function CountDisplay() {
-  const [count] = useContext(CounterContext)
+  const [count] = useCount()
   return <div>{`The current count is ${count}`}</div>
 }
 
 function Counter() {
-  const [, setCount] = useContext(CounterContext)
+  const [, setCount] = useCount()
   const increment = () => setCount(c => c + 1)
   return <button onClick={increment}>Increment count</button>
 }
