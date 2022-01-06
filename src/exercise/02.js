@@ -2,6 +2,8 @@
 // http://localhost:3000/isolated/exercise/02.js
 
 import * as React from 'react'
+import {useEffect} from 'react'
+import {useRef} from 'react'
 import {useCallback} from 'react'
 import {
   fetchPokemon,
@@ -10,6 +12,22 @@ import {
   PokemonInfoFallback,
   PokemonErrorBoundary,
 } from '../pokemon'
+
+function useSafeDispatch(dispatch) {
+  const mountedRef = useRef(false)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
+
+  return useCallback(
+    (...args) => (mountedRef.current ? dispatch(...args) : void 0),
+    [dispatch],
+  )
+}
 
 // 🐨 this is going to be our generic asyncReducer
 function pokemonInfoReducer(state, action) {
@@ -30,24 +48,29 @@ function pokemonInfoReducer(state, action) {
 }
 
 function useAsync(initialState) {
-  const [state, dispatch] = React.useReducer(pokemonInfoReducer, {
+  const [state, unsafeDispatch] = React.useReducer(pokemonInfoReducer, {
     status: 'idle',
     data: null,
     error: null,
     ...initialState,
   })
 
-  const run = useCallback(promise => {
-    dispatch({type: 'pending'})
-    promise.then(
-      data => {
-        dispatch({type: 'resolved', data})
-      },
-      error => {
-        dispatch({type: 'rejected', error})
-      },
-    )
-  }, [])
+  const dispatch = useSafeDispatch(unsafeDispatch)
+
+  const run = useCallback(
+    promise => {
+      dispatch({type: 'pending'})
+      promise.then(
+        data => {
+          dispatch({type: 'resolved', data})
+        },
+        error => {
+          dispatch({type: 'rejected', error})
+        },
+      )
+    },
+    [dispatch],
+  )
 
   return {...state, run}
 }
